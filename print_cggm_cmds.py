@@ -9,9 +9,9 @@ GENERAL_PREFIX = "/mnt/c/Users/apare/Desktop/KimResearchGroup/Spring2022/"
 TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM/citruss.py"
 TO_DATA = GENERAL_PREFIX + "input_simulation/simulateCode2/missing"
 
-N = 2000
-Q = 40
-P = 100
+N = 350
+Q = 400
+P = 1000
 
 MISSING_RATIOS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 NSIMS = 1 # NSIMS = 10

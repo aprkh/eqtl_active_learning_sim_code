@@ -18,7 +18,7 @@ INIT_PROP = 0.05
 
 # some other parameters
 THRESHOLD = 65
-MAXITER = 2
+MAXITER = 10
 
 # directory names
 ACTIVE_LEARNING_DIR = "active_learning_sims"
@@ -40,67 +40,6 @@ def main():
                         active_learning_dir=ACTIVE_LEARNING_DIR, 
                         to_citruss=TO_CITRUSS, threshold=THRESHOLD, 
                         prop=INIT_PROP)
-    """
-    outdir = ACTIVE_LEARNING_DIR
-    outprefix = "0" 
-    prop = INIT_PROP
-
-    #\"\"\"
-    initialize_dataset(outdir, outprefix, ysum_file, ym_file, yp_file,
-                       xm_file, xp_file, prop)
-    #"\"\"
-
-    fysum = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Ysum_small.txt"
-    fym = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Ym_small.txt"
-    fyp = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Yp_small.txt"
-    fxm = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Xm_small.txt"
-    fxp = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Xp_small.txt"
-    #"\"\"
-    run_citruss(fysum, fym, fyp, fxm, fxp,
-                GENERAL_PREFIX + "input_simulation/simulateCode2/" + ACTIVE_LEARNING_DIR + "/0",
-                0.01, 0.01, 0.01, 0.01, TO_CITRUSS)
-    #"\"\"
-
-    V = np.loadtxt(GENERAL_PREFIX + "input_simulation/simulateCode2/" + ACTIVE_LEARNING_DIR + "/0" + "V.txt")
-    F = np.loadtxt(GENERAL_PREFIX + "input_simulation/simulateCode2/" + ACTIVE_LEARNING_DIR + "/0" + "F.txt")
-    Gamma = np.loadtxt(GENERAL_PREFIX + "input_simulation/simulateCode2/" + ACTIVE_LEARNING_DIR + "/0" + "Gamma.txt")
-    Psi = np.loadtxt(GENERAL_PREFIX + "input_simulation/simulateCode2/" + ACTIVE_LEARNING_DIR + "/0" + "Psi.txt")
-
-    Omega, Xi, Pi = get_params(V, F, Gamma, Psi)
-
-    ym = np.loadtxt(fym)
-    yp = np.loadtxt(fyp)
-
-    threshold = THRESHOLD
-
-    # determine needed genes
-    needed_genes = determine_needed_genes(ym, yp, Xi, Pi, threshold)
-
-    # find people heterozygous for these traits in the remaining samples 
-    fysum_large = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Ysum_large.txt"
-    fym_large = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Ym_large.txt"
-    fyp_large = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Yp_large.txt"
-    fxm_large = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Xm_large.txt"
-    fxp_large = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Xp_large.txt"
-
-    fysum_small = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Ysum_small.txt"
-    fym_small = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Ym_small.txt"
-    fyp_small = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Yp_small.txt"
-    fxm_small = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Xm_small.txt"
-    fxp_small = GENERAL_PREFIX + "input_simulation/simulateCode2/"  + ACTIVE_LEARNING_DIR + "/0Xp_small.txt"
-
-    ym_large = np.loadtxt(fym_large)
-    yp_large = np.loadtxt(fyp_large)
-
-    people_array, people_sets = to_set_cover(ym_large, yp_large, needed_genes)
-
-    _, new_people = set_cover_greedy.set_cover_greedy(people_sets, needed_genes)
-
-    update_dataset(outdir, '1', fysum_large, fysum_small, fym_large, fym_small, 
-                   fyp_large, fyp_small, fxm_large, fxm_small, fxp_large, fxp_small,
-                   new_people)
-    """
-
 
 #---------------------------------------------------------------------
 # run the active learning simulation in an automated fashion
