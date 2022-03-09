@@ -14,11 +14,13 @@ import set_cover_greedy
 
 
 # for initializing the dataset
-INIT_PROP = 0.05 
+INIT_PROP = 0.10
 
 # some other parameters
-THRESHOLD = 65
-MAXITER = 10
+THRESHOLD = 200
+MAXITER = 2
+LTHRESH = 0.80
+GTHRESH = 0.80
 
 # directory names
 ACTIVE_LEARNING_DIR = "active_learning_sims"
@@ -92,10 +94,11 @@ def active_learning_sim(start_ysum, start_ym, start_yp, start_xm, start_xp,
         # determine needed genes
         #ym = np.loadtxt(fym) 
         #yp = np.loadtxt(fyp)
-        needed_genes = determine_needed_genes(np.loadtxt(fym), np.loadtxt(fyp), Xi, Pi, threshold)
+        needed_eQTLs = determine_needed_eqtls(Xi, Pi, np.loadtxt(fym), np.loadtxt(fyp), 
+                                              np.loadtxt(fxm), np.loadtxt(fxp), LTHRESH, GTHRESH)
 
         # determine if we even need to do another sampling 
-        if len(needed_genes) < 1:
+        if len(needed_eQTLs) < 1:
             print("All genes have been sampled")
             break
 
@@ -115,10 +118,14 @@ def active_learning_sim(start_ysum, start_ym, start_yp, start_xm, start_xp,
         #ym_large = np.loadtxt(fym_large)
         #yp_large = np.loadtxt(fyp_large)
 
-        people_array, people_sets = to_set_cover(np.loadtxt(fym_large), np.loadtxt(fyp_large), needed_genes)
+        people_array, people_sets = to_set_cover(np.loadtxt(fxm_large), np.loadtxt(fxp_large),
+                                                 np.loadtxt(fym_large), np.loadtxt(fyp_large), 
+                                                 needed_eQTLs)
 
-        _, new_people = set_cover_greedy.set_cover_greedy(people_sets, needed_genes)
+        _, new_people = set_cover_greedy.set_cover_greedy(people_sets, needed_eQTLs)
         new_people = [people_array[j] for j in new_people]
+
+        print("{} new people".format(len(new_people)))
 
         update_dataset(active_learning_dir, str(iiter+1), fysum_large, fysum_small, fym_large, fym_small, 
                        fyp_large, fyp_small, fxm_large, fxm_small, fxp_large, fxp_small,
@@ -318,45 +325,62 @@ def random_subset_data(ysum, ym, yp, xm, xp, prop):
 
 
 # will need to change!
-def determine_needed_genes(ym, yp, xi, pi, threshold):
+def determine_needed_eqtls(xi, pi, ym, yp, xm, xp, Lthresh, Gthresh):
     """
-    Determines the genes we need more heterozygotes for in order to estimate 
-    allele-specific expression levels. 
-
-    Inputs:
-        ym (np.array) - maternal expression levels (NA values in i-th row 
-                        indicate sites of homozygosity in i-th person)
-        yp (np.array) - paternal expression levels (NA values in i-th row 
-                        indicate sites of homozygosity in i-th person)
-        threshold (int) - need at least this number of allele-specific 
-                            expression
+    Determines the needed eQTLs, which happens when we do not have enough 
+    people who are heterozygous at both the SNP and the expressed gene.
     """
-    assert ym.shape == yp.shape,\
-            "Error: expression matrices must be the same shape."
-    needed_genes = list()
+    needed_eqtls = []
     N, q = ym.shape
+    _, p = xm.shape
 
-    for i in range(q):
-        # check if there is any eQTL-gene interaction predicted for gene i in 
-        # the first place
-        if len(np.nonzero(xi[:, i])[0]) < 1 and len(np.nonzero(pi[:, i])[0]) < 1:
-            continue 
+    # check cis eqtls
+    x, y = np.nonzero(pi)
+    for i, j in zip(x, y):
+        print(determine_percentage_ase(ym, yp, j))
+        if determine_percentage_ase(ym, yp, j) < Gthresh:
+            needed_eqtls.append((i, j)) 
+        elif determine_percentage_heterozygotes_at_locus(xm, xp, i) < Lthresh:
+            needed_eqtls.append((i, j))
 
-        # if there is a predicted interaction, then add the gene to needed_genes if 
-        # we do not have enough.
-        n_ase = np.isfinite(ym[:, i]) 
-        assert all(n_ase == np.isfinite(yp[:, i])),\
-                "Error: maternal and paternal allele-specific expression do not match."
+    # check trans eqtls
+    x, y = np.nonzero(xi)
+    for i, j in zip(x, y):
+        print(determine_percentage_ase(ym, yp, j))
+        if determine_percentage_ase(ym, yp, j) < Gthresh:
+            print("appending")
+            needed_eqtls.append((i, j)) 
+        elif determine_percentage_heterozygotes_at_locus(xm, xp, i) < Lthresh:
+            print("appending")
+            needed_eqtls.append((i, j))
 
-        if np.sum(n_ase) < threshold:
-            needed_genes.append(i)
-    return np.array(needed_genes)
+    return list(set(needed_eqtls))
+
+
+def determine_percentage_ase(ym, yp, loc):
+    """
+    Determines the percentage of the sample for which ASE is available at a given 
+    gene locus. 
+    """
+    assert all(np.isfinite(ym[:, loc]) == np.isfinite(yp[:, loc])),\
+            "Error: maternal and paternal matrices must have the same ASE availability."
+    return np.mean(np.isfinite(ym[:, loc]))
+
+
+
+def determine_percentage_heterozygotes_at_locus(Xm, Xp, loc):
+    """
+    Determines the number of heterozygotes at locus loc given 
+    genotype expression array Xm and Xp. 
+    """
+    return np.mean(Xm[:, loc] != Xp[:, loc])
 
 
 # will need to change!
-def to_set_cover(ym, yp, genes_needed):
+def to_set_cover(xm, xp, ym, yp, eqtls_needed):
     """
-    For each person, gets list of genes for which person has ASE. 
+    For each person, gets list of eQTLs for which person has ASE and is heterozygous
+    at locus.
     Inputs:
         ym (np.array) - maternal expression matrix 
         yp (np.array) - paternal expression matrix 
@@ -365,20 +389,29 @@ def to_set_cover(ym, yp, genes_needed):
         people_array (np.array) - i-th element j corresponds to person j
         people_sets (np.array) - i-th element is set for which person j has ASE.
     """
-    mask = np.isfinite(ym)
+    if len(ym) == 0:
+        return [], []
     people_array = [] 
     people_sets = []
-    Nr, _ = ym.shape
-    for j in range(Nr):
-        has_ASE = False
-        for ig in genes_needed:
-            if mask[j, ig]:
-                has_ASE = True 
-                break
-        if has_ASE:
-            people_array.append(j)
-            people_sets.append(set(i for i in genes_needed if mask[j, i]))
+    Nr, q = ym.shape
+    _, p = xm.shape
+    for k in range(Nr):
+        person_set = set()
+        for i, j in eqtls_needed:
+            if xm[k, i] == xp[k, i]:  # person is homozygous
+                continue
+            if not np.isfinite(ym[k, j]):  # no ASE available for this person
+                continue
+            else:
+                assert np.isfinite(yp[k, j]),\
+                        print("Error: maternal and paternal expression " +
+                                "matrices must have the same ASE availability")
+            person_set.add((i, j))
+        if len(person_set) > 0:
+            people_sets.append(person_set)
+            people_array.append(k)
     return people_array, people_sets
+    
 
 
 if __name__ == '__main__':
