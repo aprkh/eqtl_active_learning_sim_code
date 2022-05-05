@@ -9,7 +9,7 @@ import subprocess
 
 # some other parameters
 THRESHOLD = 200
-MAXITER = 3
+MAXITER = 200
 LTHRESH = 0.85
 GTHRESH = 0.85
 
@@ -18,7 +18,7 @@ ACTIVE_LEARNING_DIR = "active_learning_sims"
 
 GENERAL_PREFIX = "/mnt/c/Users/apare/Desktop/KimResearchGroup/Spring2022/"
 TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM/citruss.py"
-TO_DATA = "input_simulation/simulateCodeTemp/"
+TO_DATA = "input_simulation/simulateCode2/"
 
 
 def main():

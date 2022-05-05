@@ -4,14 +4,15 @@
 ######################################################################
 
 import sys
+import subprocess
 
 GENERAL_PREFIX = "/mnt/c/Users/apare/Desktop/KimResearchGroup/Spring2022/"
-TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM/citruss.py"
+TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM_python/citruss.py"
 TO_DATA = GENERAL_PREFIX + "input_simulation/simulateCode2/missing"
 
 N = 2000
-Q = 400
-P = 1000
+Q = 150
+P = 400
 
 MISSING_RATIOS = [35] # [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 NSIMS = 1 # NSIMS = 10
@@ -43,7 +44,7 @@ def main():
                         xp_fname,
                         output_fname,
                         str(reg_v), str(reg_f), str(reg_gamma), str(reg_psi)]
-            print(' '.join(commands))
+            subprocess.run(commands, check=True)
 
 
 if __name__ == '__main__':

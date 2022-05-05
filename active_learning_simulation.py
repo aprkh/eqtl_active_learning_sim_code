@@ -18,16 +18,16 @@ INIT_PROP = 0.10
 
 # some other parameters
 THRESHOLD = 200
-MAXITER = 2
-LTHRESH = 0.80
-GTHRESH = 0.80
+MAXITER = 100
+LTHRESH = 0.85
+GTHRESH = 0.85
 
 # directory names
 ACTIVE_LEARNING_DIR = "active_learning_sims"
 
 GENERAL_PREFIX = "/mnt/c/Users/apare/Desktop/KimResearchGroup/Spring2022/"
-TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM/citruss.py"
-TO_DATA = GENERAL_PREFIX + "input_simulation/simulateCode2/missing"
+TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM_python/citruss.py"
+TO_DATA = "input_simulation/simulateCode2/"
 
 
 def main():
@@ -49,8 +49,8 @@ def main():
 def active_learning_sim(start_ysum, start_ym, start_yp, start_xm, start_xp,
                         maxiter=MAXITER, general_prefix=GENERAL_PREFIX, 
                         active_learning_dir=ACTIVE_LEARNING_DIR, 
-                        to_citruss=TO_CITRUSS, threshold=THRESHOLD, 
-                        prop=INIT_PROP):
+                        to_citruss=TO_CITRUSS, to_data=TO_DATA, 
+                        threshold=THRESHOLD, prop=INIT_PROP):
     """
     Run the active learning simulation. 
     Inputs:
@@ -73,21 +73,21 @@ def active_learning_sim(start_ysum, start_ym, start_yp, start_xm, start_xp,
                        start_xm, start_xp, prop)
 
     for iiter in range(maxiter):
-        fysum = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/{}Ysum_small.txt".format(iiter)
-        fym = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/{}Ym_small.txt".format(iiter)
-        fyp = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/{}Yp_small.txt".format(iiter)
-        fxm = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/{}Xm_small.txt".format(iiter)
-        fxp = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/{}Xp_small.txt".format(iiter)
+        fysum = general_prefix + to_data + active_learning_dir + "/{}Ysum_small.txt".format(iiter)
+        fym = general_prefix + to_data  + active_learning_dir + "/{}Ym_small.txt".format(iiter)
+        fyp = general_prefix + to_data  + active_learning_dir + "/{}Yp_small.txt".format(iiter)
+        fxm = general_prefix + to_data  + active_learning_dir + "/{}Xm_small.txt".format(iiter)
+        fxp = general_prefix + to_data  + active_learning_dir + "/{}Xp_small.txt".format(iiter)
 
         run_citruss(fysum, fym, fyp, fxm, fxp,
-                    general_prefix + "input_simulation/simulateCode2/" + active_learning_dir + "/" + str(iiter),
+                    general_prefix + to_data + active_learning_dir + "/" + str(iiter),
                     0.01, 0.01, 0.01, 0.01, to_citruss)
 
     
-        V = np.loadtxt(general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "V.txt")
-        F = np.loadtxt(general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "F.txt")
-        Gamma = np.loadtxt(general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Gamma.txt")
-        Psi = np.loadtxt(general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Psi.txt")
+        V = np.loadtxt(general_prefix + to_data  + active_learning_dir + "/" + str(iiter) + "V.txt")
+        F = np.loadtxt(general_prefix + to_data  + active_learning_dir + "/" + str(iiter) + "F.txt")
+        Gamma = np.loadtxt(general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Gamma.txt")
+        Psi = np.loadtxt(general_prefix + to_data  + active_learning_dir + "/" + str(iiter) + "Psi.txt")
 
         Omega, Xi, Pi = get_params(V, F, Gamma, Psi)
 
@@ -99,21 +99,21 @@ def active_learning_sim(start_ysum, start_ym, start_yp, start_xm, start_xp,
 
         # determine if we even need to do another sampling 
         if len(needed_eQTLs) < 1:
-            print("All genes have been sampled")
-            break
+            print("All genes have been sampled", file=sys.stderr)
+            return 
 
         # find people heterozygous for these traits in the remaining samples 
-        fysum_large = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Ysum_large.txt"
-        fym_large = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Ym_large.txt"
-        fyp_large = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Yp_large.txt"
-        fxm_large = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Xm_large.txt"
-        fxp_large = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Xp_large.txt"
+        fysum_large = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Ysum_large.txt"
+        fym_large = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Ym_large.txt"
+        fyp_large = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Yp_large.txt"
+        fxm_large = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Xm_large.txt"
+        fxp_large = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Xp_large.txt"
 
-        fysum_small = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Ysum_small.txt"
-        fym_small = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Ym_small.txt"
-        fyp_small = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Yp_small.txt"
-        fxm_small = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Xm_small.txt"
-        fxp_small = general_prefix + "input_simulation/simulateCode2/"  + active_learning_dir + "/" + str(iiter) + "Xp_small.txt"
+        fysum_small = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Ysum_small.txt"
+        fym_small = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Ym_small.txt"
+        fyp_small = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Yp_small.txt"
+        fxm_small = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Xm_small.txt"
+        fxp_small = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Xp_small.txt"
 
         #ym_large = np.loadtxt(fym_large)
         #yp_large = np.loadtxt(fyp_large)
@@ -125,14 +125,23 @@ def active_learning_sim(start_ysum, start_ym, start_yp, start_xm, start_xp,
         _, new_people = set_cover_greedy.set_cover_greedy(people_sets, needed_eQTLs)
         new_people = [people_array[j] for j in new_people]
 
-        print("{} new people".format(len(new_people)))
+        print("{} new people".format(len(new_people)), file=sys.stderr)
+
+        # simulation is over if mno new people. 
+        if len(new_people) < 1:
+            return 
 
         update_dataset(active_learning_dir, str(iiter+1), fysum_large, fysum_small, fym_large, fym_small, 
                        fyp_large, fyp_small, fxm_large, fxm_small, fxp_large, fxp_small,
                        new_people)
 
+    fysum = general_prefix + to_data + active_learning_dir + "/{}Ysum_small.txt".format(maxiter)
+    fym = general_prefix + to_data + active_learning_dir + "/{}Ym_small.txt".format(maxiter)
+    fyp = general_prefix + to_data + active_learning_dir + "/{}Yp_small.txt".format(maxiter)
+    fxm = general_prefix + to_data + active_learning_dir + "/{}Xm_small.txt".format(maxiter)
+    fxp = general_prefix + to_data + active_learning_dir + "/{}Xp_small.txt".format(maxiter)
     run_citruss(fysum, fym, fyp, fxm, fxp,
-                general_prefix + "input_simulation/simulateCode2/" + active_learning_dir + "/" + "Final",
+                general_prefix + to_data + active_learning_dir + "/" + str(maxiter),
                 0.01, 0.01, 0.01, 0.01, to_citruss)
 
 #---------------------------------------------------------------------
@@ -337,7 +346,7 @@ def determine_needed_eqtls(xi, pi, ym, yp, xm, xp, Lthresh, Gthresh):
     # check cis eqtls
     x, y = np.nonzero(pi)
     for i, j in zip(x, y):
-        print(determine_percentage_ase(ym, yp, j))
+        print(determine_percentage_ase(ym, yp, j), file=sys.stderr)
         if determine_percentage_ase(ym, yp, j) < Gthresh:
             needed_eqtls.append((i, j)) 
         elif determine_percentage_heterozygotes_at_locus(xm, xp, i) < Lthresh:
@@ -346,12 +355,12 @@ def determine_needed_eqtls(xi, pi, ym, yp, xm, xp, Lthresh, Gthresh):
     # check trans eqtls
     x, y = np.nonzero(xi)
     for i, j in zip(x, y):
-        print(determine_percentage_ase(ym, yp, j))
+        print(determine_percentage_ase(ym, yp, j), file=sys.stderr)
         if determine_percentage_ase(ym, yp, j) < Gthresh:
-            print("appending")
+            print("appending", file=sys.stderr)
             needed_eqtls.append((i, j)) 
         elif determine_percentage_heterozygotes_at_locus(xm, xp, i) < Lthresh:
-            print("appending")
+            print("appending", file=sys.stderr)
             needed_eqtls.append((i, j))
 
     return list(set(needed_eqtls))
@@ -405,7 +414,8 @@ def to_set_cover(xm, xp, ym, yp, eqtls_needed):
             else:
                 assert np.isfinite(yp[k, j]),\
                         print("Error: maternal and paternal expression " +
-                                "matrices must have the same ASE availability")
+                                "matrices must have the same ASE availability",
+                              file=sys.stderr)
             person_set.add((i, j))
         if len(person_set) > 0:
             people_sets.append(person_set)
