@@ -1,24 +1,29 @@
-#!/usr/bin/env python3 
+#!/usr/bin/env python3
 ############################################################
-# active_learning_simulation.py 
+# active_learning_simulation.py
 ############################################################
 
-import sys 
-import numpy as np 
+# for timing 
+import time 
+
+import sys
+from matplotlib.pyplot import fill
+import numpy as np
 import subprocess
 
-# for set cover algorithm 
-sys.path.append("/mnt/c/Users/apare/Desktop/KimResearchGroup/Spring2022/setCoverProblem/")
+
+# for set cover algorithm
+sys.path.append(
+    "/mnt/c/Users/apare/Desktop/KimResearchGroup/Spring2022/setCoverProblem/")
 
 import set_cover_greedy
-
 
 # for initializing the dataset
 INIT_PROP = 0.10
 
 # some other parameters
 THRESHOLD = 200
-MAXITER = 100
+MAXITER = 3
 LTHRESH = 0.85
 GTHRESH = 0.85
 
@@ -26,7 +31,7 @@ GTHRESH = 0.85
 ACTIVE_LEARNING_DIR = "active_learning_sims"
 
 GENERAL_PREFIX = "/mnt/c/Users/apare/Desktop/KimResearchGroup/Spring2022/"
-TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM_python/citruss.py"
+TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM_cpp/citruss"
 TO_DATA = "input_simulation/simulateCode2/"
 
 
@@ -38,18 +43,20 @@ def main():
     xp_file = "missing35/Xp1.txt"
 
     active_learning_sim(ysum_file, ym_file, yp_file, xm_file, xp_file,
-                        maxiter=MAXITER, general_prefix=GENERAL_PREFIX, 
-                        active_learning_dir=ACTIVE_LEARNING_DIR, 
-                        to_citruss=TO_CITRUSS, threshold=THRESHOLD, 
+                        maxiter=MAXITER, general_prefix=GENERAL_PREFIX,
+                        active_learning_dir=ACTIVE_LEARNING_DIR,
+                        to_citruss=TO_CITRUSS, threshold=THRESHOLD,
                         prop=INIT_PROP)
 
-#---------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # run the active learning simulation in an automated fashion
-#---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+
+
 def active_learning_sim(start_ysum, start_ym, start_yp, start_xm, start_xp,
-                        maxiter=MAXITER, general_prefix=GENERAL_PREFIX, 
-                        active_learning_dir=ACTIVE_LEARNING_DIR, 
-                        to_citruss=TO_CITRUSS, to_data=TO_DATA, 
+                        maxiter=MAXITER, general_prefix=GENERAL_PREFIX,
+                        active_learning_dir=ACTIVE_LEARNING_DIR,
+                        to_citruss=TO_CITRUSS, to_data=TO_DATA,
                         threshold=THRESHOLD, prop=INIT_PROP):
     """
     Run the active learning simulation. 
@@ -73,114 +80,187 @@ def active_learning_sim(start_ysum, start_ym, start_yp, start_xm, start_xp,
                        start_xm, start_xp, prop)
 
     for iiter in range(maxiter):
-        fysum = general_prefix + to_data + active_learning_dir + "/{}Ysum_small.txt".format(iiter)
-        fym = general_prefix + to_data  + active_learning_dir + "/{}Ym_small.txt".format(iiter)
-        fyp = general_prefix + to_data  + active_learning_dir + "/{}Yp_small.txt".format(iiter)
-        fxm = general_prefix + to_data  + active_learning_dir + "/{}Xm_small.txt".format(iiter)
-        fxp = general_prefix + to_data  + active_learning_dir + "/{}Xp_small.txt".format(iiter)
+        fysum = general_prefix + to_data + active_learning_dir + \
+            "/{}Ysum_small.txt".format(iiter)
+        fym = general_prefix + to_data + active_learning_dir + \
+            "/{}Ym_small.txt".format(iiter)
+        fyp = general_prefix + to_data + active_learning_dir + \
+            "/{}Yp_small.txt".format(iiter)
+        fxm = general_prefix + to_data + active_learning_dir + \
+            "/{}Xm_small.txt".format(iiter)
+        fxp = general_prefix + to_data + active_learning_dir + \
+            "/{}Xp_small.txt".format(iiter)
 
         run_citruss(fysum, fym, fyp, fxm, fxp,
-                    general_prefix + to_data + active_learning_dir + "/" + str(iiter),
+                    general_prefix + to_data +
+                    active_learning_dir + "/" + str(iiter),
                     0.01, 0.01, 0.01, 0.01, to_citruss)
 
-    
-        V = np.loadtxt(general_prefix + to_data  + active_learning_dir + "/" + str(iiter) + "V.txt")
-        F = np.loadtxt(general_prefix + to_data  + active_learning_dir + "/" + str(iiter) + "F.txt")
-        Gamma = np.loadtxt(general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Gamma.txt")
-        Psi = np.loadtxt(general_prefix + to_data  + active_learning_dir + "/" + str(iiter) + "Psi.txt")
+        V = np.loadtxt(general_prefix + to_data +
+                       active_learning_dir + "/" + str(iiter) + "V.txt")
+        F = np.loadtxt(general_prefix + to_data +
+                       active_learning_dir + "/" + str(iiter) + "F.txt")
+        Gamma = np.loadtxt(general_prefix + to_data +
+                           active_learning_dir + "/" + str(iiter) + "Gamma.txt")
+        Psi = np.loadtxt(general_prefix + to_data +
+                         active_learning_dir + "/" + str(iiter) + "Psi.txt")
 
         Omega, Xi, Pi = get_params(V, F, Gamma, Psi)
 
         # determine needed genes
-        #ym = np.loadtxt(fym) 
+        #ym = np.loadtxt(fym)
         #yp = np.loadtxt(fyp)
-        needed_eQTLs = determine_needed_eqtls(Xi, Pi, np.loadtxt(fym), np.loadtxt(fyp), 
+        needed_eQTLs = determine_needed_eqtls(Xi, Pi, np.loadtxt(fym), np.loadtxt(fyp),
                                               np.loadtxt(fxm), np.loadtxt(fxp), LTHRESH, GTHRESH)
 
-        # determine if we even need to do another sampling 
+        # determine if we even need to do another sampling
         if len(needed_eQTLs) < 1:
             print("All genes have been sampled", file=sys.stderr)
-            return 
+            return
 
-        # find people heterozygous for these traits in the remaining samples 
-        fysum_large = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Ysum_large.txt"
-        fym_large = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Ym_large.txt"
-        fyp_large = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Yp_large.txt"
-        fxm_large = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Xm_large.txt"
-        fxp_large = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Xp_large.txt"
+        # find people heterozygous for these traits in the remaining samples
+        fysum_large = general_prefix + to_data + \
+            active_learning_dir + "/" + str(iiter) + "Ysum_large.txt"
+        fym_large = general_prefix + to_data + \
+            active_learning_dir + "/" + str(iiter) + "Ym_large.txt"
+        fyp_large = general_prefix + to_data + \
+            active_learning_dir + "/" + str(iiter) + "Yp_large.txt"
+        fxm_large = general_prefix + to_data + \
+            active_learning_dir + "/" + str(iiter) + "Xm_large.txt"
+        fxp_large = general_prefix + to_data + \
+            active_learning_dir + "/" + str(iiter) + "Xp_large.txt"
 
-        fysum_small = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Ysum_small.txt"
-        fym_small = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Ym_small.txt"
-        fyp_small = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Yp_small.txt"
-        fxm_small = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Xm_small.txt"
-        fxp_small = general_prefix + to_data + active_learning_dir + "/" + str(iiter) + "Xp_small.txt"
+        fysum_small = general_prefix + to_data + \
+            active_learning_dir + "/" + str(iiter) + "Ysum_small.txt"
+        fym_small = general_prefix + to_data + \
+            active_learning_dir + "/" + str(iiter) + "Ym_small.txt"
+        fyp_small = general_prefix + to_data + \
+            active_learning_dir + "/" + str(iiter) + "Yp_small.txt"
+        fxm_small = general_prefix + to_data + \
+            active_learning_dir + "/" + str(iiter) + "Xm_small.txt"
+        fxp_small = general_prefix + to_data + \
+            active_learning_dir + "/" + str(iiter) + "Xp_small.txt"
 
         #ym_large = np.loadtxt(fym_large)
         #yp_large = np.loadtxt(fyp_large)
 
         people_array, people_sets = to_set_cover(np.loadtxt(fxm_large), np.loadtxt(fxp_large),
-                                                 np.loadtxt(fym_large), np.loadtxt(fyp_large), 
+                                                 np.loadtxt(fym_large), np.loadtxt(
+                                                     fyp_large),
                                                  needed_eQTLs)
 
-        _, new_people = set_cover_greedy.set_cover_greedy(people_sets, needed_eQTLs)
+        _, new_people = set_cover_greedy.set_cover_greedy(
+            people_sets, needed_eQTLs)
         new_people = [people_array[j] for j in new_people]
 
         print("{} new people".format(len(new_people)), file=sys.stderr)
 
-        # simulation is over if mno new people. 
+        # simulation is over if mno new people.
         if len(new_people) < 1:
-            return 
+            return
 
-        update_dataset(active_learning_dir, str(iiter+1), fysum_large, fysum_small, fym_large, fym_small, 
+        update_dataset(active_learning_dir, str(iiter+1), fysum_large, fysum_small, fym_large, fym_small,
                        fyp_large, fyp_small, fxm_large, fxm_small, fxp_large, fxp_small,
                        new_people)
 
-    fysum = general_prefix + to_data + active_learning_dir + "/{}Ysum_small.txt".format(maxiter)
-    fym = general_prefix + to_data + active_learning_dir + "/{}Ym_small.txt".format(maxiter)
-    fyp = general_prefix + to_data + active_learning_dir + "/{}Yp_small.txt".format(maxiter)
-    fxm = general_prefix + to_data + active_learning_dir + "/{}Xm_small.txt".format(maxiter)
-    fxp = general_prefix + to_data + active_learning_dir + "/{}Xp_small.txt".format(maxiter)
+    fysum = general_prefix + to_data + active_learning_dir + \
+        "/{}Ysum_small.txt".format(maxiter)
+    fym = general_prefix + to_data + active_learning_dir + \
+        "/{}Ym_small.txt".format(maxiter)
+    fyp = general_prefix + to_data + active_learning_dir + \
+        "/{}Yp_small.txt".format(maxiter)
+    fxm = general_prefix + to_data + active_learning_dir + \
+        "/{}Xm_small.txt".format(maxiter)
+    fxp = general_prefix + to_data + active_learning_dir + \
+        "/{}Xp_small.txt".format(maxiter)
     run_citruss(fysum, fym, fyp, fxm, fxp,
-                general_prefix + to_data + active_learning_dir + "/" + str(maxiter),
+                general_prefix + to_data +
+                active_learning_dir + "/" + str(maxiter),
                 0.01, 0.01, 0.01, 0.01, to_citruss)
 
-#---------------------------------------------------------------------
-# Run citruss.py on a dataset; reconstruct parameters 
-#---------------------------------------------------------------------
-def run_citruss(fysum, fym, fyp, fxm, fxp, output_prefix, 
+# ---------------------------------------------------------------------
+# Run citruss.py on a dataset; reconstruct parameters
+# ---------------------------------------------------------------------
+
+
+def run_citruss(fysum, fym, fyp, fxm, fxp, output_prefix,
                 vreg, freg, gammareg, psireg, citruss_path):
     """
     Run citruss on a dataset with the given parameters. 
     """
-    # get N, q, p 
-    N, q = np.loadtxt(fysum).shape 
+    # get N, q, p
+    N, q = np.loadtxt(fysum).shape
     _, p = np.loadtxt(fxm).shape
-    
-    cmd_list = ['python', citruss_path, str(N), str(q), str(p), 
-                fysum, fym, fyp, fxm, fxp, output_prefix, 
-                str(vreg), str(freg), str(gammareg), str(psireg)]
-    
+
+    cmd_list = [citruss_path, str(N), str(q), str(p),
+                fysum, fym, fyp, fxm, fxp, str(vreg),
+                str(freg), str(gammareg), str(psireg),
+                '-o', output_prefix]
+
     subprocess.run(cmd_list, check=True)
 
 
 def get_params(V, F, Gamma, Psi):
     """
     Reconstruct Omega, Xi, and Pi from the input parameters. 
+    Note that the c++ output is a sparse matrix format, must convert to regular. 
     """
-    Omega = V - Gamma 
-    Pi = 2 * Psi 
-    Xi = F 
-    Xi[np.nonzero(Pi)] = 0 
+    V, F, Gamma, Psi = convert_sparse_to_regular(V, F, Gamma, Psi)
+    Omega = V - Gamma
+    Pi = 2 * Psi
+    Xi = F
+    Xi[np.nonzero(Pi)] = 0
     return Omega, Xi, Pi
 
 
-#---------------------------------------------------------------------
+def convert_sparse_to_regular(V, F, Gamma, Psi, sparse=False):
+    """
+    Converts the sparse-formatted c++ output into a regular numpy matrix. 
+    If sparse is True, will convert back to scipy sparse matrix, but this 
+    is not implemented yet. 
+    """
+    if sparse:
+        raise NotImplementedError("Error: option for storing sparse matrices is not implemented!")
+    
+    # fill out V_out
+    V_out = np.zeros((int(V[0, 0]), int(V[0, 1])))
+    fill_out_sparse_to_reg(V[1:], V_out, int(V[0, 2]))
+
+    # fill out F_out 
+    F_out = np.zeros((int(F[0, 0]), int(F[0, 1])))
+    fill_out_sparse_to_reg(F[1:], F_out, int(F[0, 2]))
+
+    # Gamma is just a diagonal
+    Gamma_out = np.diag(Gamma)
+
+    # Finally, Psi is the same shape as F, unless Psi is empty 
+    Psi_out = np.zeros(F_out.shape)
+    # Make sure Psi is a 2-D array 
+    if len(Psi.shape) == 1:
+        Psi = Psi[np.newaxis, :]
+    if Psi.shape != (1, 0):  
+        fill_out_sparse_to_reg(Psi, Psi_out, Psi.shape[0])
+
+    return V_out, F_out, Gamma_out, Psi_out
+
+
+def fill_out_sparse_to_reg(A, A_out, nfill):
+    """
+    Copy over non-zero entries from A (sparse) to A_out (regular). 
+    There are nfill non-zero entries. 
+    """
+    for i in range(nfill):
+        r, c, a = A[i]
+        A_out[int(r-1), int(c-1)] = a
+
+
+# ---------------------------------------------------------------------
 # Initialize active learning dataset, update dataset after round
-#---------------------------------------------------------------------
-def update_dataset(outdir, outprefix, 
-                   fysum_large, fysum_small, 
-                   fym_large, fym_small, 
-                   fyp_large, fyp_small, 
+# ---------------------------------------------------------------------
+def update_dataset(outdir, outprefix,
+                   fysum_large, fysum_small,
+                   fym_large, fym_small,
+                   fyp_large, fyp_small,
                    fxm_large, fxm_small,
                    fxp_large, fxp_small,
                    set_cover_people):
@@ -205,14 +285,14 @@ def update_dataset(outdir, outprefix,
     """
     ysum_large = np.loadtxt(fysum_large)
     ysum_small = np.loadtxt(fysum_small)
-    ym_large = np.loadtxt(fym_large) 
-    ym_small = np.loadtxt(fym_small) 
+    ym_large = np.loadtxt(fym_large)
+    ym_small = np.loadtxt(fym_small)
     yp_large = np.loadtxt(fyp_large)
     yp_small = np.loadtxt(fyp_small)
-    xm_large = np.loadtxt(fxm_large) 
-    xm_small = np.loadtxt(fxm_small) 
-    xp_large = np.loadtxt(fxp_large) 
-    xp_small = np.loadtxt(fxp_small) 
+    xm_large = np.loadtxt(fxm_large)
+    xm_small = np.loadtxt(fxm_small)
+    xp_large = np.loadtxt(fxp_large)
+    xp_small = np.loadtxt(fxp_small)
 
     Nr, q = ysum_large.shape
     _, p = xp_large.shape
@@ -260,15 +340,15 @@ def initialize_dataset(outdir, outprefix, fysum, fym, fyp, fxm, fxp, prop):
     Outputs - none (saves files to outdir)
     """
     ysum = np.loadtxt(fysum)
-    ym = np.loadtxt(fym) 
+    ym = np.loadtxt(fym)
     yp = np.loadtxt(fyp)
-    xm = np.loadtxt(fxm) 
-    xp = np.loadtxt(fxp) 
-    
-    subset, remaining = random_subset_data(ysum, ym, yp, xm, xp, prop) 
+    xm = np.loadtxt(fxm)
+    xp = np.loadtxt(fxp)
 
-    ysum_small, ym_small, yp_small, xm_small, xp_small = subset 
-    ysum_large, ym_large, yp_large, xm_large, xp_large = remaining 
+    subset, remaining = random_subset_data(ysum, ym, yp, xm, xp, prop)
+
+    ysum_small, ym_small, yp_small, xm_small, xp_small = subset
+    ysum_large, ym_large, yp_large, xm_large, xp_large = remaining
 
     np.savetxt(file_path(outdir, outprefix, "Ysum_small.txt"), ysum_small)
     np.savetxt(file_path(outdir, outprefix, "Ym_small.txt"), ym_small)
@@ -287,9 +367,9 @@ def file_path(outdir, outprefix, fname):
     return ''.join((outdir, '/', outprefix, fname))
 
 
-#---------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Taking subsets of the people and determining needed genes, set cover
-#---------------------------------------------------------------------
+# ---------------------------------------------------------------------
 # will need to change!
 def random_subset_data(ysum, ym, yp, xm, xp, prop):
     """
@@ -306,21 +386,21 @@ def random_subset_data(ysum, ym, yp, xm, xp, prop):
         [(ysum_small, ym_small, yp_small, xm_small, xp_small),
          (ysum_large, ym_large, yp_large, xm_large, xp_large)]
     """
-    # get parameters of whole dataset 
-    N, q = ysum.shape 
-    _, p = xm.shape 
+    # get parameters of whole dataset
+    N, q = ysum.shape
+    _, p = xm.shape
 
-    # get a random sample 
+    # get a random sample
     sample_mask = np.repeat(False, N)
-    nsample = np.int64(N * prop) 
-    true_idx = np.random.choice(np.arange(0, N, 1, dtype=np.int64), nsample, 
+    nsample = np.int64(N * prop)
+    true_idx = np.random.choice(np.arange(0, N, 1, dtype=np.int64), nsample,
                                 replace=False)
-    sample_mask[true_idx] = True 
+    sample_mask[true_idx] = True
 
     ysum_small = ysum[sample_mask, :]
-    ym_small = ym[sample_mask, :] 
-    yp_small = yp[sample_mask, :] 
-    xm_small = xm[sample_mask, :] 
+    ym_small = ym[sample_mask, :]
+    yp_small = yp[sample_mask, :]
+    xm_small = xm[sample_mask, :]
     xp_small = xp[sample_mask, :]
 
     ysum_large = ysum[np.logical_not(sample_mask), :]
@@ -348,7 +428,7 @@ def determine_needed_eqtls(xi, pi, ym, yp, xm, xp, Lthresh, Gthresh):
     for i, j in zip(x, y):
         print(determine_percentage_ase(ym, yp, j), file=sys.stderr)
         if determine_percentage_ase(ym, yp, j) < Gthresh:
-            needed_eqtls.append((i, j)) 
+            needed_eqtls.append((i, j))
         elif determine_percentage_heterozygotes_at_locus(xm, xp, i) < Lthresh:
             needed_eqtls.append((i, j))
 
@@ -358,7 +438,7 @@ def determine_needed_eqtls(xi, pi, ym, yp, xm, xp, Lthresh, Gthresh):
         print(determine_percentage_ase(ym, yp, j), file=sys.stderr)
         if determine_percentage_ase(ym, yp, j) < Gthresh:
             print("appending", file=sys.stderr)
-            needed_eqtls.append((i, j)) 
+            needed_eqtls.append((i, j))
         elif determine_percentage_heterozygotes_at_locus(xm, xp, i) < Lthresh:
             print("appending", file=sys.stderr)
             needed_eqtls.append((i, j))
@@ -372,9 +452,8 @@ def determine_percentage_ase(ym, yp, loc):
     gene locus. 
     """
     assert all(np.isfinite(ym[:, loc]) == np.isfinite(yp[:, loc])),\
-            "Error: maternal and paternal matrices must have the same ASE availability."
+        "Error: maternal and paternal matrices must have the same ASE availability."
     return np.mean(np.isfinite(ym[:, loc]))
-
 
 
 def determine_percentage_heterozygotes_at_locus(Xm, Xp, loc):
@@ -400,7 +479,7 @@ def to_set_cover(xm, xp, ym, yp, eqtls_needed):
     """
     if len(ym) == 0:
         return [], []
-    people_array = [] 
+    people_array = []
     people_sets = []
     Nr, q = ym.shape
     _, p = xm.shape
@@ -413,16 +492,17 @@ def to_set_cover(xm, xp, ym, yp, eqtls_needed):
                 continue
             else:
                 assert np.isfinite(yp[k, j]),\
-                        print("Error: maternal and paternal expression " +
-                                "matrices must have the same ASE availability",
-                              file=sys.stderr)
+                    print("Error: maternal and paternal expression " +
+                          "matrices must have the same ASE availability",
+                          file=sys.stderr)
             person_set.add((i, j))
         if len(person_set) > 0:
             people_sets.append(person_set)
             people_array.append(k)
     return people_array, people_sets
-    
 
 
 if __name__ == '__main__':
+    start = time.time()
     main()
+    print("Program ran in {:.3f} seconds".format(time.time() - start), file=sys.stderr)

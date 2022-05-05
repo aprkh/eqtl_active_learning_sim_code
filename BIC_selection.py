@@ -12,8 +12,8 @@ import subprocess
 ACTIVE_LEARNING_DIR = "active_learning_sims"
 
 GENERAL_PREFIX = "/mnt/c/Users/apare/Desktop/KimResearchGroup/Spring2022/"
-TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM/citruss.py"
-TO_DATA = "input_simulation/simulateCodeTemp/"
+TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM_cpp/citruss"
+TO_DATA = "input_simulation/simulateCode2/"
 
 
 # %% main function
@@ -45,8 +45,8 @@ def main():
     regPsi = np.arange(0, 0.86, 0.05)
 
     output_prefix = GENERAL_PREFIX + TO_DATA + "BIC_selection/"
-    N, q = Xm.shape
-    _, p = Ym.shape
+    N, p = Xm.shape
+    _, q = Ym.shape
 
     bic_result = [None for _ in range(len(regV))]
     llik_results = [None for _ in range(len(regV))]
@@ -77,6 +77,11 @@ def get_BIC(fXm, fXp, fYm, fYp, fYsum, regV, regF, regGamma, regPsi,
     Vmat = np.loadtxt(output_prefix + "V.txt")
     GammaMat = np.loadtxt(output_prefix + "Gamma.txt")
     PsiMat = np.loadtxt(output_prefix + "Psi.txt")
+
+    Vmat, Fmat, GammaMat, PsiMat = convert_sparse_to_regular(Vmat,
+                                                             Fmat,
+                                                             GammaMat, 
+                                                             PsiMat)
 
     # return the resulting BIC and log-likelihood
     return (BIC(Xm, Xp, Ym, Yp, Ysum, Fmat, Vmat, GammaMat, PsiMat,
@@ -227,11 +232,54 @@ def run_citruss(fysum, fym, fyp, fxm, fxp, output_prefix,
     """
     Run citruss on a dataset with the given parameters.
     """
-    cmd_list = ['python', citruss_path, str(N), str(q), str(p),
-                fysum, fym, fyp, fxm, fxp, output_prefix,
-                str(vreg), str(freg), str(gammareg), str(psireg)]
+    cmd_list = [citruss_path, str(N), str(q), str(p),
+                fysum, fym, fyp, fxm, fxp, str(vreg),
+                str(freg), str(gammareg), str(psireg),
+                '-o', output_prefix]
 
     subprocess.run(cmd_list, check=True)
+
+
+# handling sparse array format 
+def convert_sparse_to_regular(V, F, Gamma, Psi, sparse=False):
+    """
+    Converts the sparse-formatted c++ output into a regular numpy matrix. 
+    If sparse is True, will convert back to scipy sparse matrix, but this 
+    is not implemented yet. 
+    """
+    if sparse:
+        raise NotImplementedError("Error: option for storing sparse matrices is not implemented!")
+    
+    # fill out V_out
+    V_out = np.zeros((int(V[0, 0]), int(V[0, 1])))
+    fill_out_sparse_to_reg(V[1:], V_out, int(V[0, 2]))
+
+    # fill out F_out 
+    F_out = np.zeros((int(F[0, 0]), int(F[0, 1])))
+    fill_out_sparse_to_reg(F[1:], F_out, int(F[0, 2]))
+
+    # Gamma is just a diagonal
+    Gamma_out = np.diag(Gamma)
+
+    # Finally, Psi is the same shape as F, unless Psi is empty 
+    Psi_out = np.zeros(F_out.shape)
+    # Make sure Psi is a 2-D array 
+    if len(Psi.shape) == 1:
+        Psi = Psi[np.newaxis, :]
+    if Psi.shape != (1, 0):  
+        fill_out_sparse_to_reg(Psi, Psi_out, Psi.shape[0])
+
+    return V_out, F_out, Gamma_out, Psi_out
+
+
+def fill_out_sparse_to_reg(A, A_out, nfill):
+    """
+    Copy over non-zero entries from A (sparse) to A_out (regular). 
+    There are nfill non-zero entries. 
+    """
+    for i in range(nfill):
+        r, c, a = A[i]
+        A_out[int(r-1), int(c-1)] = a
 
 
 # %% execute main
