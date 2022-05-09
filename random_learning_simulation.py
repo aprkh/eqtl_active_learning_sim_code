@@ -17,7 +17,7 @@ GTHRESH = 0.85
 ACTIVE_LEARNING_DIR = "active_learning_sims"
 
 GENERAL_PREFIX = "/mnt/c/Users/apare/Desktop/KimResearchGroup/Spring2022/"
-TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM/citruss.py"
+TO_CITRUSS = GENERAL_PREFIX + "mlcggm/Mega-sCGGM_cpp/citruss"
 TO_DATA = "input_simulation/simulateCode2/"
 
 
@@ -98,7 +98,7 @@ def random_learning_sim(start_ysum_large, start_ym_large, start_yp_large, start_
         Psi = np.loadtxt(general_prefix + to_data +
                          active_learning_dir + "/" + str(iiter) + "Psi.txt")
 
-        Omega, Xi, Pi = get_params(V, F, Gamma, Psi)
+        Omega, Xi, Pi = get_params_nosparse(V, F, Gamma, Psi)
 
         # find people heterozygous for these traits in the remaining samples
         fysum_large = general_prefix + to_data + \
@@ -172,22 +172,25 @@ def run_citruss(fysum, fym, fyp, fxm, fxp, output_prefix,
     N, q = np.loadtxt(fysum).shape
     _, p = np.loadtxt(fxm).shape
 
-    cmd_list = ['python', citruss_path, str(N), str(q), str(p),
-                fysum, fym, fyp, fxm, fxp, output_prefix,
-                str(vreg), str(freg), str(gammareg), str(psireg)]
+    cmd_list = [citruss_path, str(N), str(q), str(p),
+                fysum, fym, fyp, fxm, fxp, str(vreg),
+                str(freg), str(gammareg), str(psireg),
+                '-o', output_prefix]
 
     subprocess.run(cmd_list, check=True)
 
 
-def get_params(V, F, Gamma, Psi):
+def get_params_nosparse(V, F, Gamma, Psi):
     """
-    Reconstruct Omega, Xi, and Pi from the input parameters.
+    Reconstruct Omega, Xi, and Pi from the input parameters. 
+    No sparse inputs. 
     """
-    Omega = V - Gamma
-    Pi = 2 * Psi
-    Xi = F
-    Xi[np.nonzero(Pi)] = 0
+    Omega = V - Gamma 
+    Pi = 2 * Psi 
+    Xi = F 
+    Xi[np.nonzero(Pi)] = 0 
     return Omega, Xi, Pi
+
 
 
 # ---------------------------------------------------------------------
