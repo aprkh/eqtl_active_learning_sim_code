@@ -7,6 +7,11 @@
 # %% import statements
 import numpy as np
 import subprocess
+import sys
+import itertools
+
+# for timing
+import time
 
 # %% directories
 ACTIVE_LEARNING_DIR = "active_learning_sims"
@@ -39,22 +44,41 @@ def main():
     # Gamma = np.loadtxt("missing35/1Gamma.txt")
     # Psi = np.loadtxt("missing35/1Psi.txt")
 
-    regV = np.arange(0, 0.86, 0.05)
-    regF = np.arange(0, 0.86, 0.05)
-    regGamma = np.arange(0, 0.86, 0.05)
-    regPsi = np.arange(0, 0.86, 0.05)
+    regV = np.arange(1.0, 5.01, 1.0)
+    regF = np.arange(1.0, 5.01, 1.0)
+    regGamma = np.arange(1.0, 5.01, 1.0)
+    regPsi = np.arange(1.0, 5.01, 1.0)
+
+    product = itertools.product(regV, regF, regGamma, regPsi)
 
     output_prefix = GENERAL_PREFIX + TO_DATA + "BIC_selection/"
     N, p = Xm.shape
     _, q = Ym.shape
 
-    bic_result = [None for _ in range(len(regV))]
-    llik_results = [None for _ in range(len(regV))]
-    for i in range(len(regV)):
-        bic_result[i] = get_BIC(fXm, fXp, fYm, fYp, fYsum, regV[i], regF[i], regGamma[i], regPsi[i],
-                                Xm, Xp, Ym, Yp, Ysum, output_prefix, N, q, p)
+    bic_result = []
+    regVarr = []
+    regFarr = []
+    regGammaArr = []
+    regPsiArr = []
+    for x in product:
+        regV, regF, regGamma, regPsi = x
+        regVarr.append(regV)
+        regFarr.append(regF)
+        regGammaArr.append(regGamma)
+        regPsiArr.append(regPsi)
+        bic_result.append(get_BIC(fXm, fXp, fYm, fYp, fYsum, regV, regF, regGamma, regPsi,
+                                Xm, Xp, Ym, Yp, Ysum, output_prefix, N, q, p))
 
     print(bic_result)
+
+    # get the parameters which give the best BIC 
+    best_i = 0
+    for i in range(len(bic_result)):
+        if bic_result[i][0][0] <= bic_result[best_i][0][0]:
+            best_i = i
+            
+    print("Best iteration:", best_i, bic_result[i][0][1], 'non-zero parameters')
+    print(regVarr[best_i], regFarr[best_i], regGammaArr[best_i], regPsiArr[best_i])
 
 # %% BIC grid search
 
@@ -251,12 +275,18 @@ def convert_sparse_to_regular(V, F, Gamma, Psi, sparse=False):
         raise NotImplementedError("Error: option for storing sparse matrices is not implemented!")
     
     # fill out V_out
-    V_out = np.zeros((int(V[0, 0]), int(V[0, 1])))
-    fill_out_sparse_to_reg(V[1:], V_out, int(V[0, 2]))
+    if len(V.shape) == 1 and V[2] == 0.0:
+        V_out = np.zeros((int(V[0]), int(V[1])))
+    else:
+        V_out = np.zeros((int(V[0, 0]), int(V[0, 1])))
+        fill_out_sparse_to_reg(V[1:], V_out, int(V[0, 2]))
 
     # fill out F_out 
-    F_out = np.zeros((int(F[0, 0]), int(F[0, 1])))
-    fill_out_sparse_to_reg(F[1:], F_out, int(F[0, 2]))
+    if len(F.shape) == 1 and F[2] == 0.0:
+        F_out = np.zeros((int(F[0]), int(F[1])))
+    else:
+        F_out = np.zeros((int(F[0, 0]), int(F[0, 1])))
+        fill_out_sparse_to_reg(F[1:], F_out, int(F[0, 2]))
 
     # Gamma is just a diagonal
     Gamma_out = np.diag(Gamma)
@@ -285,6 +315,10 @@ def fill_out_sparse_to_reg(A, A_out, nfill):
 # %% execute main
 
 if __name__ == '__main__':
+    start_main = time.time()
     main()
+    print("Program ran in {:.3f} seconds".format(time.time() - start_main))
+
+    print()
 
 # %%
